@@ -8,7 +8,7 @@ import requests
 # Add current directory to path to allow direct imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from services import get_eonet_events, get_eco_briefing, analyze_trends, check_route_safety
+from services import get_eonet_events, get_eco_briefing, analyze_trends, check_route_safety, get_eonet_categories
 
 app = FastAPI()
 
@@ -20,8 +20,12 @@ app.add_middleware(
 )
 
 @app.get("/api/events")
-async def events():
-    return get_eonet_events()
+async def events(category_id: str = Query(None)):
+    return get_eonet_events(category_id)
+
+@app.get("/api/categories")
+async def categories():
+    return get_eonet_categories()
 
 @app.get("/api/eco-briefing")
 async def eco_briefing(lat: float, lon: float):
