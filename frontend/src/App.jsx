@@ -28,9 +28,13 @@ const createEmeraldIcon = (color = '#10b981') => L.divIcon({
 
 function App() {
   const [events, setEvents] = useState([]);
+  const [activeTab, setActiveTab] = useState('events-map');
+  const [loading, setLoading] = useState(false);
+  const [userPos, setUserPos] = useState(null);
+  const [briefing, setBriefing] = useState("");
   const [analyticsData, setAnalyticsData] = useState("");
   const [routeResult, setRouteResult] = useState("");
-  const [routeData, setRouteData] = useState({ start: "", end: "" });
+  const [routeData, setRouteData] = useState({ start: "" , end: "" });
 
   useEffect(() => {
     setLoading(true);
