@@ -17,7 +17,7 @@ const API_BASE = "http://localhost:8000/api";
 function App() {
   const [events, setEvents] = useState([]);
   const [activeTab, setActiveTab] = useState('events-map');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [userPos, setUserPos] = useState(null);
   const [briefing, setBriefing] = useState("");
   const [analyticsData, setAnalyticsData] = useState("");
@@ -25,7 +25,6 @@ function App() {
   const [routeData, setRouteData] = useState({ start: "" , end: "" });
 
   useEffect(() => {
-    setLoading(true);
     axios.get(`${API_BASE}/events`)
       .then(res => {
         setEvents(res.data);
