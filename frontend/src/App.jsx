@@ -69,7 +69,7 @@ function App() {
     try {
       const res = await axios.get(`${API_BASE}/eco-briefing?lat=${userPos[0]}&lon=${userPos[1]}`);
       setBriefing(res.data);
-    } catch (err) {
+    } catch {
       setBriefing("Unable to connect to Earth Guardian systems.");
     }
     setLoading(false);
@@ -80,7 +80,7 @@ function App() {
     try {
       const res = await axios.get(`${API_BASE}/climate-pulse?category=${category}`);
       setAnalyticsData(res.data);
-    } catch (err) {
+    } catch {
       setAnalyticsData("Analytics engine temporarily unavailable.");
     }
     setLoading(false);
@@ -97,7 +97,7 @@ function App() {
         end: routeData.end 
       });
       setRouteResult(res.data);
-    } catch (err) {
+    } catch {
       setRouteResult("Route calculation failed.");
     }
     setLoading(false);
