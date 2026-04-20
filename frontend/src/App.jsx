@@ -1,62 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
 import { 
+  Globe, 
   ShieldAlert, 
   Activity, 
   MapPinned, 
-  Wind, 
-  Navigation, 
-  Layers, 
-  AlertTriangle,
+  Wind,
   Info,
-  ChevronRight
+  Calendar,
+  Tag,
+  ChevronRight,
+  Navigation
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 const API_BASE = "http://localhost:8000/api";
 
-// Custom Marker Helper
-const createCustomIcon = (color, isPulse = false) => L.divIcon({
+// Custom Emerald Marker Icon
+const createEmeraldIcon = (color = '#10b981') => L.divIcon({
   className: 'custom-icon',
-  html: `<div class="hazard-container" style="background: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color}; ${isPulse ? 'animation: pulse-hazard 2s infinite;' : ''}"></div>`,
-  iconSize: [12, 12],
-  iconAnchor: [6, 6]
+  html: `<div style="background: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7]
 });
-
-const EVENT_COLORS = {
-  'Wildfires': '#ef4444',
-  'Severe Storms': '#3b82f6',
-  'Floods': '#06b6d4',
-  'Volcanoes': '#f97316',
-  'Icebergs': '#94a3b8',
-  'default': '#10b981'
-};
-
-function MapCentering({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) map.setView(center, 5);
-  }, [center, map]);
-  return null;
-}
 
 function App() {
   const [events, setEvents] = useState([]);
-  const [briefing, setBriefing] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [userPos, setUserPos] = useState([37.77, -122.41]); // Default to SF
-  const [activeTab, setActiveTab] = useState('briefing');
-  const [routeData, setRouteData] = useState({ start: "", end: "" });
   const [analyticsData, setAnalyticsData] = useState("");
   const [routeResult, setRouteResult] = useState("");
+  const [routeData, setRouteData] = useState({ start: "", end: "" });
 
   useEffect(() => {
-    // Initial data fetch
-    axios.get(`${API_BASE}/events`).then(res => setEvents(res.data));
-    
-    // Attempt geolocation
+    setLoading(true);
+    axios.get(`${API_BASE}/events`)
+      .then(res => {
+        setEvents(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch events", err);
+        setLoading(false);
+      });
+
+    // Detect User Location for Eco-Agent
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((pos) => {
         setUserPos([pos.coords.latitude, pos.coords.longitude]);
@@ -65,12 +53,13 @@ function App() {
   }, []);
 
   const fetchBriefing = async () => {
+    if (!userPos) return;
     setLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/eco-briefing?lat=${userPos[0]}&lon=${userPos[1]}`);
       setBriefing(res.data);
     } catch {
-      setBriefing("Unable to connect to Earth Guardian systems.");
+      setBriefing("Environmental analytical systems are currently recalibrating. Please try again soon.");
     }
     setLoading(false);
   };
@@ -78,10 +67,11 @@ function App() {
   const fetchAnalytics = async (category) => {
     setLoading(true);
     try {
+      // Re-using the logic from our services
       const res = await axios.get(`${API_BASE}/climate-pulse?category=${category}`);
       setAnalyticsData(res.data);
     } catch {
-      setAnalyticsData("Analytics engine temporarily unavailable.");
+      setAnalyticsData("Historical data stream from EONET node interrupted.");
     }
     setLoading(false);
   };
@@ -90,235 +80,320 @@ function App() {
     if (!routeData.start || !routeData.end) return;
     setLoading(true);
     try {
-      // Note: In a real app, we'd geocode strings to coordinates. 
-      // For this demo, we'll pass the labels and let Gemini reason or use placeholders.
       const res = await axios.post(`${API_BASE}/safe-route`, { 
         start: routeData.start, 
         end: routeData.end 
       });
       setRouteResult(res.data);
     } catch {
-      setRouteResult("Route calculation failed.");
+      setRouteResult("Geospatial route evaluation failed.");
     }
     setLoading(false);
   };
 
-  return (
-    <div className="flex h-screen w-full bg-[#0a0b10] text-[#f8fafc] font-sans overflow-hidden">
-      
-      {/* Premium Sidebar */}
-      <div className="w-[450px] glass-panel z-[1000] flex flex-col border-r border-white/5">
-        
-        {/* Header */}
-        <div className="p-8 border-b border-white/5 bg-white/5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Wind className="text-blue-400 w-6 h-6" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tighter">
-              EARTH <span className="text-blue-400">GUARDIAN</span>
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 font-mono flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            NASA EONET LIVE FEED STABLE
-          </p>
-        </div>
+  const tabs = [
+    { id: 'events-map', label: 'Events Map', icon: Globe },
+    { id: 'eco-agent', label: 'Eco-Agent', icon: ShieldAlert },
+    { id: 'climate-pulse', label: 'Climate Pulse', icon: Activity },
+    { id: 'safe-route', label: 'Safe-Route', icon: MapPinned },
+  ];
 
-        {/* Tab Navigation */}
-        <div className="flex px-4 py-2 bg-black/20 gap-2">
-          {['briefing', 'analytics', 'navigation'].map(tab => (
-            <button 
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${activeTab === tab ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+  return (
+    <div className="app-container">
+      {/* Top Navigation */}
+      <nav className="top-nav">
+        <div className="flex items-center gap-2 mr-12">
+          <Wind className="text-emerald-500 w-6 h-6" />
+          <span className="font-bold text-xl tracking-tight text-slate-800">
+            EARTH <span className="text-emerald-500">GUARDIAN</span>
+          </span>
+        </div>
+        
+        <div className="flex h-full">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`nav-tab flex items-center gap-2 ${activeTab === tab.id ? 'active' : ''}`}
             >
-              {tab.toUpperCase()}
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Dynamic Content Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          
-          {activeTab === 'briefing' && (
-            <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-              <div className="glass-card mb-4 border-l-2 border-l-blue-500">
-                <h2 className="text-sm font-bold flex items-center gap-2 mb-4">
-                  <ShieldAlert className="text-blue-400 w-4 h-4" /> LOCAL ECO-STATUS
-                </h2>
-                <div className="text-sm text-slate-300 leading-relaxed min-h-[100px] font-light">
-                  {briefing ? (
-                    <div className="space-y-3">
-                      <p className="whitespace-pre-wrap">{briefing}</p>
+        <div className="ml-auto flex items-center gap-4">
+          <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            NASA EONET LIVE
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content Area */}
+      <main className="flex-1 relative overflow-hidden bg-slate-50">
+        
+        {activeTab === 'events-map' && (
+          <div className="h-full w-full flex animate-in">
+            {/* Map Area */}
+            <div className="flex-1 relative">
+              <MapContainer 
+                center={[20, 0]} 
+                zoom={3} 
+                style={{ height: "100%", width: "100%" }}
+                zoomControl={false}
+              >
+                <TileLayer 
+                  url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                  attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
+                />
+                
+                {events.map(event => {
+                  if (!event.geometries || event.geometries.length === 0) return null;
+                  const geometry = event.geometries[0];
+                  const position = geometry.type === 'Point' 
+                    ? [geometry.coordinates[1], geometry.coordinates[0]]
+                    : [geometry.coordinates[0][0][1], geometry.coordinates[0][0][0]];
+
+                  return (
+                    <Marker 
+                      key={event.id} 
+                      position={position}
+                      icon={createEmeraldIcon()}
+                    >
+                      <Popup>
+                        <div className="p-1 max-w-[200px]">
+                          <h3 className="font-bold text-sm text-slate-800 mb-2">{event.title}</h3>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                              <Tag className="w-3 h-3 text-emerald-500" />
+                              {event.categories?.[0]?.title || 'Environmental Event'}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                              <Calendar className="w-3 h-3 text-emerald-500" />
+                              {new Date(geometry.date).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <button className="mt-3 w-full bg-emerald-500 text-white text-[10px] py-1.5 rounded font-bold hover:bg-emerald-600 transition-colors">
+                            VIEW DETAILS
+                          </button>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  );
+                })}
+              </MapContainer>
+
+              {/* Floating Legend/Summary */}
+              <div className="absolute bottom-6 right-6 glass-panel p-4 rounded-2xl z-[1000] min-w-[200px]">
+                <h4 className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">Map Summary</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Total Events</span>
+                    <span className="text-sm font-bold text-emerald-600">{events.length}</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full w-[70%]" />
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-tight mt-1">
+                    Showing current active events from NASA EONET v2.1 feed.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Side Info Panel for Events-Map */}
+            <div className="w-[350px] bg-white border-l border-slate-200 overflow-y-auto p-6 hidden lg:block">
+              <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
+                <Globe className="text-emerald-500" /> Active Feed
+              </h2>
+              <div className="space-y-4">
+                {events.slice(0, 10).map(event => (
+                  <div key={event.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-emerald-200 transition-colors cursor-pointer group">
+                    <h3 className="text-sm font-semibold group-hover:text-emerald-600 transition-colors truncate">{event.title}</h3>
+                    <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold">{event.categories?.[0]?.title}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'eco-agent' && (
+          <div className="h-full w-full flex items-center justify-center p-8 animate-in">
+            <div className="max-w-2xl w-full">
+              <div className="bg-white rounded-[2rem] shadow-2xl p-10 border border-slate-100 relative overflow-hidden">
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-emerald-50 rounded-full blur-3xl opacity-50" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="p-4 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-200">
+                      <ShieldAlert className="text-white w-8 h-8" />
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-bold text-slate-800">Eco-Agent Intelligence</h2>
+                      <p className="text-slate-500">Localized environmental hazard sensing.</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mb-8 text-sm">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <span className="text-slate-400 font-bold uppercase text-[10px] block mb-1">Status</span>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${userPos ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`} />
+                        <span className="font-semibold">{userPos ? 'Geolocation Active' : 'Sensing Location...'}</span>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <span className="text-slate-400 font-bold uppercase text-[10px] block mb-1">Coordinates</span>
+                      <span className="font-mono">{userPos ? `${userPos[0].toFixed(2)}, ${userPos[1].toFixed(2)}` : 'Scanning...'}</span>
+                    </div>
+                  </div>
+                  <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-100 min-h-[180px] flex flex-col items-center justify-center text-center">
+                    {loading && activeTab === 'eco-agent' ? (
+                      <div className="space-y-4">
+                        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                        <p className="text-emerald-700 font-medium animate-pulse">Consulting NASA EONET data...</p>
+                      </div>
+                    ) : briefing ? (
+                      <div className="text-left w-full">
+                        <h4 className="text-xs font-bold text-emerald-600 uppercase mb-2 tracking-widest flex items-center gap-2">
+                          <Activity className="w-3 h-3" /> AI GENERATED BRIEFING
+                        </h4>
+                        <p className="text-slate-700 leading-relaxed font-light italic">"{briefing}"</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Info className="text-emerald-300 w-12 h-12 mb-4" />
+                        <p className="text-emerald-700 font-medium">Ready to analyze environmental threats at your location.</p>
+                      </>
+                    )}
+                  </div>
+                  <button 
+                    onClick={fetchBriefing}
+                    disabled={loading || !userPos}
+                    className="w-full mt-8 bg-emerald-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200 disabled:opacity-50 flex items-center justify-center gap-3"
+                  >
+                    <Navigation className="w-5 h-5" />
+                    {loading ? 'ANALYZING...' : 'SYNC LOCAL INTELLIGENCE'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'climate-pulse' && (
+          <div className="h-full w-full flex items-center justify-center p-8 animate-in">
+            <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
+              <div className="bg-white rounded-[2rem] shadow-xl p-6 border border-slate-100">
+                <h3 className="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Select Category</h3>
+                <div className="space-y-2">
+                  {['Wildfires', 'Storms', 'Floods', 'Volcanoes', 'Icebergs'].map(cat => (
+                    <button 
+                      key={cat}
+                      onClick={() => fetchAnalytics(cat)}
+                      className="w-full text-left p-4 rounded-xl border border-slate-50 hover:border-emerald-200 hover:bg-emerald-50 transition-all group"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-slate-700 group-hover:text-emerald-700">{cat}</span>
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-[2rem] shadow-xl p-8 border border-slate-100 flex flex-col">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
+                    <Activity className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-800">Historical Perspective</h2>
+                </div>
+
+                <div className="flex-1 bg-slate-50 rounded-2xl p-6 border border-slate-100 overflow-y-auto">
+                  {loading && activeTab === 'climate-pulse' ? (
+                    <div className="h-full flex flex-col items-center justify-center space-y-4">
+                      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-slate-500 animate-pulse">Parsing multi-source NASA archives...</p>
+                    </div>
+                  ) : analyticsData ? (
+                    <div className="prose prose-slate max-w-none">
+                      <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{analyticsData}</p>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-24 text-slate-500 italic">
-                      <Info className="w-8 h-8 mb-2 opacity-20" />
-                      Run local scan for AI evaluation
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                      <Globe className="w-16 h-16 mb-4" />
+                      <p className="text-sm font-medium">Select a hazard category to view AI-synthesized trend analysis.</p>
                     </div>
                   )}
                 </div>
               </div>
-              <button 
-                onClick={fetchBriefing} 
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 py-4 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
-              >
-                {loading && activeTab === 'briefing' ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : <Activity className="w-4 h-4" />}
-                {(loading && activeTab === 'briefing') ? "PROCESSING..." : "ANALYZE LOCAL RADIUS"}
-              </button>
             </div>
-          )}
-
-          {activeTab === 'analytics' && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
-               <h3 className="text-xs font-bold text-slate-500 flex items-center gap-2">
-                <Activity className="w-3 h-3" /> CLIMATE PULSE TRENDS
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {['Wildfires', 'Storms', 'Floods', 'Drought'].map(cat => (
-                  <button 
-                    key={cat}
-                    onClick={() => fetchAnalytics(cat)}
-                    className="glass-card text-xs hover:bg-blue-500/10 hover:border-blue-500/30 transition-all text-left"
-                  >
-                    {cat} Analysis
-                  </button>
-                ))}
-              </div>
-              
-              <div className="glass-card mt-4 border-l-2 border-l-green-500">
-                <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
-                  {loading && activeTab === 'analytics' ? "Crunching historical NASA sets..." : (analyticsData || "Select a category to view multi-decade trend analysis powered by Gemini 1.5.")}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'navigation' && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-left-4">
-              <h2 className="text-sm font-bold flex items-center gap-2">
-                <MapPinned className="text-blue-400 w-4 h-4" /> SAFE-ROUTE NAV
-              </h2>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input 
-                    className="w-full bg-white/5 border border-white/10 p-3 pl-10 rounded-xl text-sm focus:bg-white/10 transition-all font-light" 
-                    placeholder="Origin" 
-                    value={routeData.start}
-                    onChange={(e) => setRouteData({...routeData, start: e.target.value})}
-                  />
-                </div>
-                <div className="relative">
-                  <MapPinned className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input 
-                    className="w-full bg-white/5 border border-white/10 p-3 pl-10 rounded-xl text-sm focus:bg-white/10 transition-all font-light" 
-                    placeholder="Destination" 
-                    value={routeData.end}
-                    onChange={(e) => setRouteData({...routeData, end: e.target.value})}
-                  />
-                </div>
-              </div>
-              <button 
-                onClick={evaluateRoute}
-                disabled={loading || !routeData.start || !routeData.end}
-                className="w-full bg-slate-100 text-black py-4 rounded-xl font-bold text-sm hover:bg-white transition-all disabled:opacity-50"
-              >
-                {(loading && activeTab === 'navigation') ? "CALCULATING THREATS..." : "EVALUATE PATH SAFETY"}
-              </button>
-
-              {routeResult && (
-                <div className="glass-card border-l-2 border-l-amber-500 text-xs text-slate-300 whitespace-pre-wrap">
-                  {routeResult}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Footer Stats */}
-        <div className="p-4 bg-black/40 border-t border-white/5 grid grid-cols-2 gap-4">
-          <div className="flex flex-col">
-            <span className="text-[10px] text-slate-500 uppercase font-bold">Latency</span>
-            <span className="text-xs font-mono text-green-400">12ms (Direct)</span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] text-slate-500 uppercase font-bold">API Version</span>
-            <span className="text-xs font-mono text-slate-300">G-1.5-FLASH</span>
-          </div>
-        </div>
-      </div>
+        )}
 
-      {/* Map Visualization */}
-      <div className="flex-1 relative">
-        <MapContainer 
-          center={[20, 0]} 
-          zoom={2} 
-          style={{ height: "100%", width: "100%" }}
-          zoomControl={false}
-        >
-          <TileLayer 
-             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          />
-          <MapCentering center={userPos} />
-          
-          {/* User Marker */}
-          <Marker position={userPos} icon={createCustomIcon('#3b82f6', true)}>
-            <Popup>
-              <div className="p-2">
-                <span className="text-xs font-bold text-slate-400">YOUR LOCATION</span>
-                <p className="text-sm">Scan radius active.</p>
-              </div>
-            </Popup>
-          </Marker>
-
-          {events.map(event => {
-            const category = event.categories?.[0]?.title || 'default';
-            const color = EVENT_COLORS[category] || EVENT_COLORS['default'];
-            const [lon, lat] = event.geometries[0].coordinates;
-
-            return (
-              <Marker 
-                key={event.id} 
-                position={[lat, lon]}
-                icon={createCustomIcon(color)}
-              >
-                <Popup className="premium-popup">
-                  <div className="p-1">
-                    <h3 className="font-bold text-sm mb-1">{event.title}</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase px-2 py-0.5 rounded-full" style={{ background: color + '33', color: color }}>
-                        {category}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(event.geometries[0].date).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <button className="mt-3 w-full text-[10px] font-bold text-white uppercase flex items-center justify-between group">
-                      Detailed Intel <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                    </button>
+        {activeTab === 'safe-route' && (
+          <div className="h-full w-full flex items-center justify-center p-8 animate-in">
+            <div className="max-w-2xl w-full">
+              <div className="bg-white rounded-[2rem] shadow-2xl p-10 border border-slate-100">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="p-4 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-200">
+                    <MapPinned className="text-white w-8 h-8" />
                   </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MapContainer>
+                  <div>
+                    <h2 className="text-3xl font-bold text-slate-800">Safe-Route Navigator</h2>
+                    <p className="text-slate-500">Environmental path verification system.</p>
+                  </div>
+                </div>
 
-        {/* Map Controls Floating */}
-        <div className="absolute top-6 right-6 flex flex-col gap-2 z-[1000]">
-          <button className="p-3 glass-panel rounded-xl hover:bg-white/10 transition-all">
-            <Layers className="w-5 h-5" />
-          </button>
-          <button className="p-3 glass-panel rounded-xl hover:bg-white/10 transition-all">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
-          </button>
-        </div>
-      </div>
+                <div className="space-y-4 mb-8">
+                  <div className="relative">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    <input 
+                      className="w-full bg-slate-50 border border-slate-100 p-4 pl-12 rounded-2xl text-sm focus:border-emerald-300 focus:bg-white transition-all outline-none" 
+                      placeholder="Enter starting point..." 
+                      value={routeData.start}
+                      onChange={(e) => setRouteData({...routeData, start: e.target.value})}
+                    />
+                  </div>
+                  <div className="relative">
+                    <MapPinned className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    <input 
+                      className="w-full bg-slate-50 border border-slate-100 p-4 pl-12 rounded-2xl text-sm focus:border-emerald-300 focus:bg-white transition-all outline-none" 
+                      placeholder="Enter destination..." 
+                      value={routeData.end}
+                      onChange={(e) => setRouteData({...routeData, end: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 min-h-[120px] flex items-center justify-center text-center">
+                  {loading && activeTab === 'safe-route' ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-emerald-700 font-medium">Scanning intersecting hazards...</p>
+                    </div>
+                  ) : routeResult ? (
+                    <div className="text-left w-full border-l-4 border-emerald-500 pl-4 py-2">
+                       <p className="text-slate-700 leading-relaxed font-light italic">"{routeResult}"</p>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 italic">Enter route details to initialize environmental safety check.</p>
+                  )}
+                </div>
+
+                <button 
+                  onClick={evaluateRoute}
+                  disabled={loading || !routeData.start || !routeData.end}
+                  className="w-full mt-8 bg-slate-800 text-white py-4 rounded-2xl font-bold text-lg hover:bg-slate-900 transition-all shadow-xl disabled:opacity-50"
+                >
+                  {loading ? 'CALCULATING...' : 'VERIFY ROUTE SAFETY'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

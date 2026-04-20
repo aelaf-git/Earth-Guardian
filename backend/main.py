@@ -1,6 +1,13 @@
-from fastapi import FastAPI, HTTPException
+import sys
+import os
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import requests
+
+# Add current directory to path to allow direct imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from services import get_eonet_events, get_eco_briefing, analyze_trends, check_route_safety
 
 app = FastAPI()
