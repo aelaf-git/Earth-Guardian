@@ -106,11 +106,14 @@ function App() {
     <div className="app-container">
       {/* Top Navigation */}
       <nav className="top-nav">
-        <div className="flex items-center gap-2 mr-12">
-          <Wind className="text-emerald-500 w-6 h-6" />
-          <span className="font-bold text-xl tracking-tight text-slate-800">
-            EARTH <span className="text-emerald-500">GUARDIAN</span>
-          </span>
+        <div className="flex items-center gap-3 mr-12 h-full">
+          <img src="/logo.png" alt="Earth Guardian Logo" className="h-10 w-auto" />
+          <div className="flex flex-col">
+            <span className="font-bold text-lg leading-none tracking-tight text-slate-800">
+              EARTH <span className="text-emerald-500">GUARDIAN</span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">AI SATELLITE NODE</span>
+          </div>
         </div>
         
         <div className="flex h-full">
@@ -129,22 +132,22 @@ function App() {
         <div className="ml-auto flex items-center gap-4">
           <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100 flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-            NASA EONET LIVE
+            NASA EONET v2.1 LIVE
           </div>
         </div>
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative overflow-hidden bg-slate-50">
+      <main className="flex-1 relative bg-slate-100 overflow-hidden" id="main-content">
         
         {activeTab === 'events-map' && (
-          <div className="h-full w-full flex animate-in">
+          <div className="absolute inset-0 flex animate-in" key="map-view">
             {/* Map Area */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative bg-[#e5e7eb] overflow-hidden">
               <MapContainer 
                 center={[20, 0]} 
                 zoom={3} 
-                style={{ height: "100%", width: "100%" }}
+                style={{ height: "100%", width: "100%", background: "#f1f5f9" }}
                 zoomControl={false}
               >
                 <TileLayer 
