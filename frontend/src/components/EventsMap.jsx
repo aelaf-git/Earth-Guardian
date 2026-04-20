@@ -22,7 +22,7 @@ const EventsMap = ({ events, categories = [], onCategorySelect }) => {
 
   return (
     <div className="map-container-fixed animate-in flex" key="map-view">
-      <div className="flex-1 relative">
+      <div className="flex-1 relative h-full w-full">
         <MapContainer 
           center={[20, 0]} 
         zoom={3} 
@@ -34,7 +34,7 @@ const EventsMap = ({ events, categories = [], onCategorySelect }) => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
-        {events.map(event => {
+        {events?.map(event => {
           if (!event.geometries || event.geometries.length === 0) return null;
           const geometry = event.geometries[0];
           const position = geometry.type === 'Point' 
@@ -108,7 +108,7 @@ const EventsMap = ({ events, categories = [], onCategorySelect }) => {
             >
               All Events
             </button>
-            {categories.map(cat => (
+            {categories?.map(cat => (
               <button 
                 key={cat.id}
                 onClick={() => handleCategoryClick(cat.id)}
@@ -125,7 +125,7 @@ const EventsMap = ({ events, categories = [], onCategorySelect }) => {
         </div>
 
         <div className="space-y-4">
-          {events.slice(0, 15).map(event => (
+          {events?.slice(0, 15).map(event => (
             <div key={event.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-emerald-200 transition-colors cursor-pointer group">
               <h3 className="text-sm font-semibold group-hover:text-emerald-600 transition-colors truncate">{event.title}</h3>
               <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold">{event.categories?.[0]?.title}</p>
