@@ -106,7 +106,7 @@ function App() {
     <div className="app-container">
       {/* Top Navigation */}
       <nav className="top-nav">
-        <div className="flex items-center gap-3 mr-12 h-full">
+        <div className="logo-container">
           <img src="/logo.png" alt="Earth Guardian Logo" className="h-10 w-auto" />
           <div className="flex flex-col">
             <span className="font-bold text-lg leading-none tracking-tight text-slate-800">
@@ -116,7 +116,7 @@ function App() {
           </div>
         </div>
         
-        <div className="flex h-full">
+        <div className="flex h-full ml-8">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -138,58 +138,56 @@ function App() {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative bg-slate-100 overflow-hidden" id="main-content">
+      <main className="flex-1 relative bg-slate-100" id="main-content">
         
         {activeTab === 'events-map' && (
-          <div className="absolute inset-0 flex animate-in" key="map-view">
-            {/* Map Area */}
-            <div className="flex-1 relative bg-[#e5e7eb] overflow-hidden">
-              <MapContainer 
-                center={[20, 0]} 
-                zoom={3} 
-                style={{ height: "100%", width: "100%", background: "#f1f5f9" }}
-                zoomControl={false}
-              >
-                <TileLayer 
-                  url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                  attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
-                />
-                
-                {events.map(event => {
-                  if (!event.geometries || event.geometries.length === 0) return null;
-                  const geometry = event.geometries[0];
-                  const position = geometry.type === 'Point' 
-                    ? [geometry.coordinates[1], geometry.coordinates[0]]
-                    : [geometry.coordinates[0][0][1], geometry.coordinates[0][0][0]];
+          <div className="map-container-fixed animate-in" key="map-view">
+            <MapContainer 
+              center={[20, 0]} 
+              zoom={3} 
+              scrollWheelZoom={true}
+              zoomControl={false}
+            >
+              <TileLayer 
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              
+              {events.map(event => {
+                if (!event.geometries || event.geometries.length === 0) return null;
+                const geometry = event.geometries[0];
+                const position = geometry.type === 'Point' 
+                  ? [geometry.coordinates[1], geometry.coordinates[0]]
+                  : [geometry.coordinates[0][0][1], geometry.coordinates[0][0][0]];
 
-                  return (
-                    <Marker 
-                      key={event.id} 
-                      position={position}
-                      icon={createEmeraldIcon()}
-                    >
-                      <Popup>
-                        <div className="p-1 max-w-[200px]">
-                          <h3 className="font-bold text-sm text-slate-800 mb-2">{event.title}</h3>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                              <Tag className="w-3 h-3 text-emerald-500" />
-                              {event.categories?.[0]?.title || 'Environmental Event'}
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                              <Calendar className="w-3 h-3 text-emerald-500" />
-                              {new Date(geometry.date).toLocaleDateString()}
-                            </div>
+                return (
+                  <Marker 
+                    key={event.id} 
+                    position={position}
+                    icon={createEmeraldIcon()}
+                  >
+                    <Popup>
+                      <div className="p-1 max-w-[200px]">
+                        <h3 className="font-bold text-sm text-slate-800 mb-2">{event.title}</h3>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                            <Tag className="w-3 h-3 text-emerald-500" />
+                            {event.categories?.[0]?.title || 'Environmental Event'}
                           </div>
-                          <button className="mt-3 w-full bg-emerald-500 text-white text-[10px] py-1.5 rounded font-bold hover:bg-emerald-600 transition-colors">
-                            VIEW DETAILS
-                          </button>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                            <Calendar className="w-3 h-3 text-emerald-500" />
+                            {new Date(geometry.date).toLocaleDateString()}
+                          </div>
                         </div>
-                      </Popup>
-                    </Marker>
-                  );
-                })}
-              </MapContainer>
+                        <button className="mt-3 w-full bg-emerald-500 text-white text-[10px] py-1.5 rounded font-bold hover:bg-emerald-600 transition-colors">
+                          VIEW DETAILS
+                        </button>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
+            </MapContainer>
 
               {/* Floating Legend/Summary */}
               <div className="absolute bottom-6 right-6 glass-panel p-4 rounded-2xl z-[1000] min-w-[200px]">

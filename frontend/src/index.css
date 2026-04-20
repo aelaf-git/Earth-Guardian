@@ -104,8 +104,23 @@ body {
 }
 
 /* Leaflet Customizations */
+.map-container-fixed {
+  height: calc(100vh - 64px);
+  width: 100%;
+}
+
 .leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
   background: #f1f5f9 !important;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+  padding-left: 0.5rem;
 }
 
 .marker-emerald {
