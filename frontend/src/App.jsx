@@ -16,6 +16,7 @@ const API_BASE = "http://localhost:8000/api";
 
 function App() {
   const [events, setEvents] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [activeTab, setActiveTab] = useState('events-map');
   const [loading, setLoading] = useState(true);
   const [userPos, setUserPos] = useState(null);
@@ -24,8 +25,13 @@ function App() {
   const [routeResult, setRouteResult] = useState("");
   const [routeData, setRouteData] = useState({ start: "" , end: "" });
 
-  useEffect(() => {
-    axios.get(`${API_BASE}/events`)
+  const fetchEventsByCategory = (categoryId) => {
+    setLoading(true);
+    const url = categoryId 
+      ? `${API_BASE}/events?category_id=${categoryId}`
+      : `${API_BASE}/events`;
+      
+    axios.get(url)
       .then(res => {
         setEvents(res.data);
         setLoading(false);
@@ -33,6 +39,20 @@ function App() {
       .catch(err => {
         console.error("Failed to fetch events", err);
         setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    // Initial fetch for events (all)
+    fetchEventsByCategory(null);
+
+    // Fetch categories list
+    axios.get(`${API_BASE}/categories`)
+      .then(res => {
+        setCategories(res.data);
+      })
+      .catch(err => {
+        console.error("Failed to fetch categories", err);
       });
 
     // Detect User Location for Eco-Agent
@@ -97,8 +117,14 @@ function App() {
         setActiveTab={setActiveTab} 
       />
 
-      <main className="flex-1 relative bg-slate-100" id="main-content">
-        {activeTab === 'events-map' && <EventsMap events={events} />}
+      <main className="flex-1 relative bg-slate-100 overflow-hidden" id="main-content">
+        {activeTab === 'events-map' && (
+          <EventsMap 
+            events={events} 
+            categories={categories} 
+            onCategorySelect={fetchEventsByCategory} 
+          />
+        )}
         
         {activeTab === 'eco-agent' && (
           <EcoAgent 

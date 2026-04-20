@@ -64,6 +64,20 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
+/* Tab styling additions to handle overflow gracefully */
+.nav-tabs-container {
+  display: flex;
+  height: 100%;
+  margin-left: 2rem;
+  overflow-x: auto;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.nav-tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
 /* Tab styling */
 .nav-tab {
   padding: 1rem 1.5rem;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { Globe, Tag, Calendar } from 'lucide-react';
@@ -10,11 +10,21 @@ const createEmeraldIcon = (color = '#10b981') => L.divIcon({
   iconAnchor: [7, 7]
 });
 
-const EventsMap = ({ events }) => {
+const EventsMap = ({ events, categories = [], onCategorySelect }) => {
+  const [selectedCatId, setSelectedCatId] = useState(null);
+
+  const handleCategoryClick = (catId) => {
+    setSelectedCatId(catId);
+    if (onCategorySelect) {
+      onCategorySelect(catId);
+    }
+  };
+
   return (
-    <div className="map-container-fixed animate-in" key="map-view">
-      <MapContainer 
-        center={[20, 0]} 
+    <div className="map-container-fixed animate-in flex" key="map-view">
+      <div className="flex-1 relative">
+        <MapContainer 
+          center={[20, 0]} 
         zoom={3} 
         scrollWheelZoom={true}
         zoomControl={false}
@@ -76,14 +86,46 @@ const EventsMap = ({ events }) => {
           </p>
         </div>
       </div>
+      </div>
 
       {/* Side Info Panel for Events-Map */}
-      <div className="w-[350px] bg-white border-l border-slate-200 overflow-y-auto p-6 hidden lg:block">
-        <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
+      <div className="w-[350px] bg-white border-l border-slate-200 overflow-y-auto p-6 hidden lg:block flex-shrink-0 z-[1000] shadow-[-10px_0_30px_rgba(0,0,0,0.03)] h-full">
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <Globe className="text-emerald-500" /> Active Feed
         </h2>
+        
+        {/* Categories Filter UI */}
+        <div className="mb-6">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Filter by Category</h3>
+          <div className="flex flex-wrap gap-2">
+            <button 
+              onClick={() => handleCategoryClick(null)}
+              className={`text-[10px] uppercase font-bold py-1.5 px-3 rounded-full transition-all border ${
+                selectedCatId === null 
+                  ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-200' 
+                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-emerald-300 hover:text-emerald-600'
+              }`}
+            >
+              All Events
+            </button>
+            {categories.map(cat => (
+              <button 
+                key={cat.id}
+                onClick={() => handleCategoryClick(cat.id)}
+                className={`text-[10px] uppercase font-bold py-1.5 px-3 rounded-full transition-all border ${
+                  selectedCatId === cat.id 
+                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-200' 
+                    : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-emerald-300 hover:text-emerald-600'
+                }`}
+              >
+                {cat.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-4">
-          {events.slice(0, 10).map(event => (
+          {events.slice(0, 15).map(event => (
             <div key={event.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-emerald-200 transition-colors cursor-pointer group">
               <h3 className="text-sm font-semibold group-hover:text-emerald-600 transition-colors truncate">{event.title}</h3>
               <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold">{event.categories?.[0]?.title}</p>
