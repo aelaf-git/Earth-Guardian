@@ -25,10 +25,8 @@ function App() {
   const [routeResult, setRouteResult] = useState("");
   const [routeData, setRouteData] = useState({ start: "" , end: "" });
 
-  const fetchEventsByCategory = (categoryId, isInitialMount = false) => {
-    if (!isInitialMount) {
-      setLoading(true);
-    }
+  const fetchEventsByCategory = (categoryId) => {
+    setLoading(true);
     const url = categoryId 
       ? `${API_BASE}/events?category_id=${categoryId}`
       : `${API_BASE}/events`;
@@ -46,7 +44,15 @@ function App() {
 
   useEffect(() => {
     // Initial fetch for events (all)
-    fetchEventsByCategory(null, true);
+    axios.get(`${API_BASE}/events`)
+      .then(res => {
+        setEvents(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch events", err);
+        setLoading(false);
+      });
 
     // Fetch categories list
     axios.get(`${API_BASE}/categories`)
