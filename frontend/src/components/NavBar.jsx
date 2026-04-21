@@ -32,7 +32,7 @@ const NavBar = ({ tabs, activeTab, setActiveTab }) => {
       <div className="ml-auto flex items-center gap-4 flex-shrink-0">
         <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100 flex items-center gap-2">
           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-          NASA EONET v2.1 LIVE
+          NASA EONET v3 LIVE
         </div>
       </div>
     </nav>

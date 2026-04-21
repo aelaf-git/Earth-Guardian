@@ -42,26 +42,29 @@ function App() {
       });
   };
 
-  useEffect(() => {
-    // Initial fetch for events (all)
+  const refreshAll = () => {
+    setLoading(true);
+    // Fetch categories list
+    axios.get(`${API_BASE}/categories`)
+      .then(res => {
+        setCategories(res.data);
+      })
+      .catch(err => console.error("Categories fetch failed", err));
+
+    // Fetch events
     axios.get(`${API_BASE}/events`)
       .then(res => {
         setEvents(res.data);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Failed to fetch events", err);
+        console.error("Events fetch failed", err);
         setLoading(false);
       });
+  };
 
-    // Fetch categories list
-    axios.get(`${API_BASE}/categories`)
-      .then(res => {
-        setCategories(res.data);
-      })
-      .catch(err => {
-        console.error("Failed to fetch categories", err);
-      });
+  useEffect(() => {
+    refreshAll();
 
     // Detect User Location for Eco-Agent
     if (navigator.geolocation) {
@@ -131,6 +134,8 @@ function App() {
             events={events} 
             categories={categories} 
             onCategorySelect={fetchEventsByCategory} 
+            onRefresh={refreshAll}
+            loading={loading}
           />
         )}
         
