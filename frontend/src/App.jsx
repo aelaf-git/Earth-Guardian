@@ -64,7 +64,22 @@ function App() {
   };
 
   useEffect(() => {
-    refreshAll();
+    // Fetch initial data
+    axios.get(`${API_BASE}/categories`)
+      .then(res => {
+        setCategories(res.data);
+      })
+      .catch(err => console.error("Categories fetch failed", err));
+
+    axios.get(`${API_BASE}/events`)
+      .then(res => {
+        setEvents(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Events fetch failed", err);
+        setLoading(false);
+      });
 
     // Detect User Location for Eco-Agent
     if (navigator.geolocation) {
