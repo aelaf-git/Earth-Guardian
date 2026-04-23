@@ -4,7 +4,6 @@ import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import { 
   Globe, 
-  Tag, 
   Calendar, 
   Flame, 
   Wind, 
@@ -31,10 +30,7 @@ const CATEGORY_STYLES = {
 const createCustomIcon = (color = '#10b981') => L.divIcon({
   className: 'custom-icon',
   html: `
-    <div style="position: relative; width: 14px; height: 14px;">
-      <div class="marker-pulse" style="background: ${color};"></div>
-      <div style="background: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 15px ${color}66; position: relative; z-index: 2;"></div>
-    </div>
+    <div style="background: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 8px ${color}55;"></div>
   `,
   iconSize: [14, 14],
   iconAnchor: [7, 7]
@@ -42,10 +38,20 @@ const createCustomIcon = (color = '#10b981') => L.divIcon({
 
 const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loading }) => {
   const [selectedCatId, setSelectedCatId] = useState(null);
+  const markerIcons = useMemo(() => {
+    const iconMap = {};
+    Object.values(CATEGORY_STYLES).forEach(({ color }) => {
+      if (!iconMap[color]) {
+        iconMap[color] = createCustomIcon(color);
+      }
+    });
+
+    return iconMap;
+  }, []);
+
   const markersData = useMemo(() => {
     return (events || [])
       .map((event) => {
-        if (!event.geometry || event.geometry.length === 0) return null;
         // EONET v3 usually uses 'geometry' (singular) or 'geometries' (plural)
         const geometries = event.geometry || event.geometries;
         if (!geometries || geometries.length === 0) return null;
@@ -64,11 +70,12 @@ const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loadi
           event,
           geometry,
           position,
-          style
+          style,
+          icon: markerIcons[style.color] || markerIcons[CATEGORY_STYLES.default.color]
         };
       })
       .filter(Boolean);
-  }, [events]);
+  }, [events, markerIcons]);
 
   const handleCategoryClick = (catId) => {
     setSelectedCatId(catId);
@@ -90,15 +97,20 @@ const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loadi
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <MarkerClusterGroup chunkedLoading>
-          {markersData.map(({ event, geometry, position, style }) => {
+        <MarkerClusterGroup
+          chunkedLoading
+          animate={false}
+          showCoverageOnHover={false}
+          removeOutsideVisibleBounds
+        >
+          {markersData.map(({ event, geometry, position, style, icon }) => {
             const CategoryIcon = style.icon;
 
             return (
               <Marker
                 key={event.id}
                 position={position}
-                icon={createCustomIcon(style.color)}
+                icon={icon}
               >
                 <Popup className="premium-popup">
                   <div className="p-2 max-w-[240px] animate-fade-in">
