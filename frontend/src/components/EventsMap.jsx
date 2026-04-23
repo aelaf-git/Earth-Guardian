@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
+import { AutoSizer } from 'react-virtualized-auto-sizer';
+import { List } from 'react-window';
 import L from 'leaflet';
 import { 
   Globe, 
@@ -15,6 +17,9 @@ import {
   Info,
   RefreshCw
 } from 'lucide-react';
+
+const MAX_FEED_ITEMS = 150;
+const FEED_ROW_HEIGHT = 116;
 
 const CATEGORY_STYLES = {
   wildfires: { color: '#ef4444', icon: Flame },
@@ -34,6 +39,39 @@ const createCustomIcon = (color = '#10b981') => L.divIcon({
   `,
   iconSize: [14, 14],
   iconAnchor: [7, 7]
+});
+
+const EventFeedItem = React.memo(function EventFeedItem({ event, rowStyle }) {
+  const eventStyle = CATEGORY_STYLES[event.categories?.[0]?.id] || CATEGORY_STYLES.default;
+  const eventDate = event.geometry?.[0]?.date || event.geometries?.[0]?.date;
+
+  return (
+    <div style={rowStyle}>
+      <div className="pb-3 pr-1">
+        <div className="p-4 bg-white rounded-2xl border border-slate-100 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-50/50 transition-all cursor-pointer group">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: eventStyle.color }} />
+            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{event.categories?.[0]?.title}</p>
+          </div>
+          <h3 className="text-sm font-bold text-slate-800 group-hover:text-emerald-600 transition-colors leading-snug">
+            {event.title}
+          </h3>
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
+              <Calendar className="w-2.5 h-2.5" />
+              {eventDate ? new Date(eventDate).toLocaleDateString() : 'Unknown date'}
+            </span>
+            <ChevronRight className="w-3 h-3 text-slate-300 group-hover:text-emerald-500 transition-transform group-hover:translate-x-1" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+const EventFeedRow = React.memo(function EventFeedRow({ index, style, eventsList }) {
+  const event = eventsList[index];
+  return <EventFeedItem event={event} rowStyle={style} />;
 });
 
 const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loading }) => {
@@ -76,6 +114,7 @@ const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loadi
       })
       .filter(Boolean);
   }, [events, markerIcons]);
+  const feedEvents = useMemo(() => (events || []).slice(0, MAX_FEED_ITEMS), [events]);
 
   const handleCategoryClick = (catId) => {
     setSelectedCatId(catId);
@@ -92,6 +131,7 @@ const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loadi
         zoom={3} 
         scrollWheelZoom={true}
         zoomControl={false}
+        updateWhenIdle
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -101,6 +141,7 @@ const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loadi
           chunkedLoading
           animate={false}
           showCoverageOnHover={false}
+          spiderfyOnMaxZoom={false}
           removeOutsideVisibleBounds
         >
           {markersData.map(({ event, geometry, position, style, icon }) => {
@@ -253,38 +294,29 @@ const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loadi
         </div>
 
         {/* Scrollable Event Feed */}
-        <div className="flex-1 overflow-y-auto px-8 custom-scrollbar pb-8">
+        <div className="flex-1 min-h-0 px-8 pb-8 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Latest Updates</h3>
-            <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Showing {events.length}</span>
+            <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+              Showing {feedEvents.length} of {events.length}
+            </span>
           </div>
           
-          <div className="space-y-3">
-            {events?.length > 0 ? (
-              events.map(event => {
-                const style = CATEGORY_STYLES[event.categories?.[0]?.id] || CATEGORY_STYLES.default;
-                return (
-                  <div 
-                    key={event.id} 
-                    className="p-4 bg-white rounded-2xl border border-slate-100 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-50/50 transition-all cursor-pointer group animate-fade-in"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: style.color }} />
-                      <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{event.categories?.[0]?.title}</p>
-                    </div>
-                    <h3 className="text-sm font-bold text-slate-800 group-hover:text-emerald-600 transition-colors leading-snug">
-                      {event.title}
-                    </h3>
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
-                        <Calendar className="w-2.5 h-2.5" />
-                        {new Date(event.geometry?.[0]?.date || event.geometries?.[0]?.date).toLocaleDateString()}
-                      </span>
-                      <ChevronRight className="w-3 h-3 text-slate-300 group-hover:text-emerald-500 transition-transform group-hover:translate-x-1" />
-                    </div>
-                  </div>
-                );
-              })
+          <div className="flex-1 min-h-0">
+            {feedEvents.length > 0 ? (
+              <AutoSizer>
+                {({ height, width }) => (
+                  <List
+                    style={{ height, width }}
+                    rowCount={feedEvents.length}
+                    rowHeight={FEED_ROW_HEIGHT}
+                    rowProps={{ eventsList: feedEvents }}
+                    rowComponent={EventFeedRow}
+                    overscanCount={6}
+                    className="custom-scrollbar"
+                  />
+                )}
+              </AutoSizer>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
