@@ -7,6 +7,8 @@ import {
   MapPinned
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import NavBar from './components/NavBar';
 import EventsMap from './components/EventsMap';
 import EcoAgent from './components/EcoAgent';

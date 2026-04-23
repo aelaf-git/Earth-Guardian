@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import { 
   Globe, 
@@ -41,6 +42,33 @@ const createCustomIcon = (color = '#10b981') => L.divIcon({
 
 const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loading }) => {
   const [selectedCatId, setSelectedCatId] = useState(null);
+  const markersData = useMemo(() => {
+    return (events || [])
+      .map((event) => {
+        if (!event.geometry || event.geometry.length === 0) return null;
+        // EONET v3 usually uses 'geometry' (singular) or 'geometries' (plural)
+        const geometries = event.geometry || event.geometries;
+        if (!geometries || geometries.length === 0) return null;
+
+        const geometry = geometries[0];
+        const position = geometry.type === 'Point'
+          ? [geometry.coordinates[1], geometry.coordinates[0]]
+          : Array.isArray(geometry.coordinates[0][0])
+            ? [geometry.coordinates[0][0][1], geometry.coordinates[0][0][0]]
+            : [geometry.coordinates[0][1], geometry.coordinates[0][0]];
+
+        const catId = event.categories?.[0]?.id;
+        const style = CATEGORY_STYLES[catId] || CATEGORY_STYLES.default;
+
+        return {
+          event,
+          geometry,
+          position,
+          style
+        };
+      })
+      .filter(Boolean);
+  }, [events]);
 
   const handleCategoryClick = (catId) => {
     setSelectedCatId(catId);
@@ -62,60 +90,47 @@ const EventsMap = ({ events, categories = [], onCategorySelect, onRefresh, loadi
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        
-        {events?.map(event => {
-          if (!event.geometry || event.geometry.length === 0) return null;
-          // EONET v3 usually uses 'geometry' (singular) or 'geometries' (plural)
-          const geometries = event.geometry || event.geometries;
-          if (!geometries || geometries.length === 0) return null;
-          
-          const geometry = geometries[0];
-          const position = geometry.type === 'Point' 
-            ? [geometry.coordinates[1], geometry.coordinates[0]]
-            : Array.isArray(geometry.coordinates[0][0])
-              ? [geometry.coordinates[0][0][1], geometry.coordinates[0][0][0]]
-              : [geometry.coordinates[0][1], geometry.coordinates[0][0]];
+        <MarkerClusterGroup chunkedLoading>
+          {markersData.map(({ event, geometry, position, style }) => {
+            const CategoryIcon = style.icon;
 
-          const catId = event.categories?.[0]?.id;
-          const style = CATEGORY_STYLES[catId] || CATEGORY_STYLES.default;
-          const CategoryIcon = style.icon;
-
-          return (
-            <Marker 
-              key={event.id} 
-              position={position}
-              icon={createCustomIcon(style.color)}
-            >
-              <Popup className="premium-popup">
-                <div className="p-2 max-w-[240px] animate-fade-in">
-                  <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
-                    <div className="p-1.5 rounded-lg" style={{ background: `${style.color}15` }}>
-                      <CategoryIcon className="w-4 h-4" style={{ color: style.color }} />
+            return (
+              <Marker
+                key={event.id}
+                position={position}
+                icon={createCustomIcon(style.color)}
+              >
+                <Popup className="premium-popup">
+                  <div className="p-2 max-w-[240px] animate-fade-in">
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                      <div className="p-1.5 rounded-lg" style={{ background: `${style.color}15` }}>
+                        <CategoryIcon className="w-4 h-4" style={{ color: style.color }} />
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {event.categories?.[0]?.title}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      {event.categories?.[0]?.title}
-                    </span>
-                  </div>
-                  
-                  <h3 className="font-bold text-sm text-slate-800 mb-2 leading-tight">{event.title}</h3>
-                  
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-center gap-2 text-[11px] text-slate-600">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      {new Date(geometry.date).toLocaleDateString(undefined, { 
-                        year: 'numeric', month: 'short', day: 'numeric' 
-                      })}
-                    </div>
-                  </div>
 
-                  <button className="w-full bg-slate-900 text-white text-[10px] py-2 rounded-lg font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                    <Info className="w-3 h-3" /> ANALYZE THREAT
-                  </button>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+                    <h3 className="font-bold text-sm text-slate-800 mb-2 leading-tight">{event.title}</h3>
+
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        {new Date(geometry.date).toLocaleDateString(undefined, {
+                          year: 'numeric', month: 'short', day: 'numeric'
+                        })}
+                      </div>
+                    </div>
+
+                    <button className="w-full bg-slate-900 text-white text-[10px] py-2 rounded-lg font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                      <Info className="w-3 h-3" /> ANALYZE THREAT
+                    </button>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MarkerClusterGroup>
       </MapContainer>
 
       {/* Floating Map Legend - Premium Glassmorphism */}
