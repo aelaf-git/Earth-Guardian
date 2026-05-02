@@ -93,8 +93,11 @@ def get_latest_events_from_db():
             events.append({
                 "id": record.nasa_id,
                 "title": record.title,
-                "categories": [{"title": record.category}],
-                "geometry": [{"coordinates": [record.longitude, record.latitude]}]
+                "categories": [{"title": record.category, "id": record.category.lower().replace(' ', '')}],
+                "geometry": [{
+                    "type": "Point",
+                    "coordinates": [record.longitude, record.latitude]
+                }]
             })
         return events
 
@@ -112,8 +115,11 @@ def get_events_for_snapshot(snapshot_id: int):
             events.append({
                 "id": record.nasa_id,
                 "title": record.title,
-                "categories": [{"title": record.category}],
-                "geometry": [{"coordinates": [record.longitude, record.latitude]}]
+                "categories": [{"title": record.category, "id": record.category.lower().replace(' ', '')}],
+                "geometry": [{
+                    "type": "Point",
+                    "coordinates": [record.longitude, record.latitude]
+                }]
             })
         return events
 

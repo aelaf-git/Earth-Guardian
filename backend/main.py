@@ -49,9 +49,10 @@ async def events(category_id: str = Query(None), snapshot_id: int = Query(None))
     # Otherwise fetch the latest from DB
     events = get_latest_events_from_db()
     if not events:
-        # Fallback for very first run if sync hasn't finished
-        print("DB empty, falling back to live NASA fetch...")
+        # This only happens if the database has ZERO snapshots
+        print("Database is empty. Performing initial live fetch...")
         return get_eonet_events(category_id)
+    
     return events
 
 @app.get("/api/timeline")

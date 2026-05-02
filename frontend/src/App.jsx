@@ -91,6 +91,18 @@ function App() {
         setUserPos([pos.coords.latitude, pos.coords.longitude]);
       });
     }
+
+    // Automatic Refresh: Keep map in sync with background database every 60 seconds
+    const refreshInterval = setInterval(() => {
+      axios.get(`${API_BASE}/events`)
+        .then(res => {
+          setEvents(res.data);
+          console.log("Map data synchronized with latest database snapshot.");
+        })
+        .catch(err => console.error("Auto-sync failed", err));
+    }, 60000);
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const fetchBriefing = async () => {
