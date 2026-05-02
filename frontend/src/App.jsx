@@ -4,7 +4,8 @@ import {
   Globe, 
   ShieldAlert, 
   Activity, 
-  MapPinned
+  MapPinned,
+  Clock
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -14,6 +15,7 @@ import EventsMap from './components/EventsMap';
 import EcoAgent from './components/EcoAgent';
 import ClimatePulse from './components/ClimatePulse';
 import SafeRoute from './components/SafeRoute';
+import Timeline from './components/Timeline';
 const API_BASE = "http://localhost:8000/api";
 
 function App() {
@@ -135,7 +137,22 @@ function App() {
     { id: 'eco-agent', label: 'Eco-Agent', icon: ShieldAlert },
     { id: 'climate-pulse', label: 'Climate Pulse', icon: Activity },
     { id: 'safe-route', label: 'Safe-Route', icon: MapPinned },
+    { id: 'timeline', label: 'Timeline', icon: Clock },
   ];
+
+  const fetchSnapshotEvents = (snapshotId) => {
+    setLoading(true);
+    axios.get(`${API_BASE}/events?snapshot_id=${snapshotId}`)
+      .then(res => {
+        setEvents(res.data);
+        setActiveTab('events-map'); // Switch to map to view the snapshot
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch snapshot events", err);
+        setLoading(false);
+      });
+  };
 
   return (
     <div className="app-container">
@@ -183,6 +200,12 @@ function App() {
             loading={loading} 
             evaluateRoute={evaluateRoute} 
             activeTab={activeTab} 
+          />
+        )}
+
+        {activeTab === 'timeline' && (
+          <Timeline 
+            onSelectSnapshot={fetchSnapshotEvents} 
           />
         )}
       </main>

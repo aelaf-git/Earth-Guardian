@@ -5,6 +5,10 @@ import time
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
+from sqlmodel import Session, select
+from database import engine
+from models import Snapshot, EventRecord
+from datetime import datetime
 
 load_dotenv()
 
@@ -28,6 +32,97 @@ _cache = {
     "category_events": {} 
 }
 CACHE_TTL = 60 # Seconds
+
+def sync_nasa_data():
+    """Fetches data from NASA and stores it as a new Snapshot in the database."""
+    print(f"[{datetime.now()}] Starting NASA data sync...")
+    events = get_eonet_events()
+    if not events:
+        print("No events fetched from NASA. Skipping sync.")
+        return
+
+    with Session(engine) as session:
+        # Create a new snapshot for this point in time
+        snapshot = Snapshot()
+        session.add(snapshot)
+        session.commit()
+        session.refresh(snapshot)
+
+        # Create records for each event
+        for event in events:
+            try:
+                # Extract geometry (taking the most recent point)
+                geo = event.get('geometry', [])
+                if not geo: continue
+                latest_geo = geo[0]
+                coords = latest_geo.get('coordinates', [0, 0])
+                
+                # Extract category
+                categories = event.get('categories', [])
+                cat_name = categories[0].get('title', 'Unknown') if categories else 'Unknown'
+
+                record = EventRecord(
+                    nasa_id=event['id'],
+                    title=event['title'],
+                    category=cat_name,
+                    latitude=coords[1],
+                    longitude=coords[0],
+                    description=event.get('description'),
+                    snapshot_id=snapshot.id
+                )
+                session.add(record)
+            except Exception as e:
+                print(f"Error processing event {event.get('id')}: {e}")
+        
+        session.commit()
+        print(f"Successfully stored {len(events)} events in Snapshot {snapshot.id}")
+
+def get_latest_events_from_db():
+    """Retrieves events from the most recent snapshot."""
+    with Session(engine) as session:
+        # Find the latest snapshot
+        statement = select(Snapshot).order_by(Snapshot.timestamp.desc()).limit(1)
+        snapshot = session.exec(statement).first()
+        
+        if not snapshot:
+            return []
+        
+        # Convert DB records back to a format the frontend expects
+        events = []
+        for record in snapshot.events:
+            events.append({
+                "id": record.nasa_id,
+                "title": record.title,
+                "categories": [{"title": record.category}],
+                "geometry": [{"coordinates": [record.longitude, record.latitude]}]
+            })
+        return events
+
+def get_events_for_snapshot(snapshot_id: int):
+    """Retrieves events for a specific snapshot."""
+    with Session(engine) as session:
+        statement = select(Snapshot).where(Snapshot.id == snapshot_id)
+        snapshot = session.exec(statement).first()
+        
+        if not snapshot:
+            return []
+        
+        events = []
+        for record in snapshot.events:
+            events.append({
+                "id": record.nasa_id,
+                "title": record.title,
+                "categories": [{"title": record.category}],
+                "geometry": [{"coordinates": [record.longitude, record.latitude]}]
+            })
+        return events
+
+def get_all_snapshots_timeline():
+    """Returns a summary of all snapshots for a timeline view."""
+    with Session(engine) as session:
+        statement = select(Snapshot).order_by(Snapshot.timestamp.desc())
+        snapshots = session.exec(statement).all()
+        return [{"id": s.id, "timestamp": s.timestamp, "event_count": len(s.events)} for s in snapshots]
 
 def get_eonet_events(category_id=None, retries=3):
     now = time.time()
