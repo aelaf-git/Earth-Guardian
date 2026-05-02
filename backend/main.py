@@ -29,7 +29,8 @@ async def background_sync():
     """Background task to sync NASA data every 60 seconds."""
     while True:
         try:
-            sync_nasa_data()
+            # Offload sync function to a separate thread to avoid blocking the event loop
+            await asyncio.to_thread(sync_nasa_data)
         except Exception as e:
             print(f"Error in background sync: {e}")
         await asyncio.sleep(60)
@@ -44,30 +45,30 @@ async def on_startup():
 async def events(category_id: str = Query(None), snapshot_id: int = Query(None)):
     # If snapshot_id is provided, fetch that specific moment
     if snapshot_id:
-        return get_events_for_snapshot(snapshot_id)
+        return await asyncio.to_thread(get_events_for_snapshot, snapshot_id)
     
     # Otherwise fetch the latest from DB
-    events = get_latest_events_from_db()
+    events = await asyncio.to_thread(get_latest_events_from_db)
     if not events:
         # This only happens if the database has ZERO snapshots
         print("Database is empty. Performing initial live fetch...")
-        return get_eonet_events(category_id)
+        return await asyncio.to_thread(get_eonet_events, category_id)
     
     return events
 
 @app.get("/api/timeline")
 async def timeline():
-    return get_all_snapshots_timeline()
+    return await asyncio.to_thread(get_all_snapshots_timeline)
 
 @app.get("/api/categories")
 async def categories():
-    return get_eonet_categories()
+    return await asyncio.to_thread(get_eonet_categories)
 
 @app.get("/api/eco-briefing")
 async def eco_briefing(lat: float, lon: float):
-    events = get_latest_events_from_db()
+    events = await asyncio.to_thread(get_latest_events_from_db)
     if not events:
-        events = get_eonet_events() # Fallback if DB is empty
+        events = await asyncio.to_thread(get_eonet_events) # Fallback if DB is empty
     return await get_eco_briefing(lat, lon, events)
 
 @app.get("/api/climate-pulse")
@@ -78,9 +79,9 @@ async def climate_pulse(category: str):
 @app.post("/api/safe-route")
 async def safe_route(data: dict):
     # data contains {start: [lat, lon], end: [lat, lon]}
-    events = get_latest_events_from_db()
+    events = await asyncio.to_thread(get_latest_events_from_db)
     if not events:
-        events = get_eonet_events()
+        events = await asyncio.to_thread(get_eonet_events)
     return await check_route_safety(data['start'], data['end'], events)
 
 if __name__ == "__main__":

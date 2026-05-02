@@ -49,6 +49,7 @@ def sync_nasa_data():
         session.refresh(snapshot)
 
         # Create records for each event
+        records = []
         for event in events:
             try:
                 # Extract geometry (taking the most recent point)
@@ -70,12 +71,14 @@ def sync_nasa_data():
                     description=event.get('description'),
                     snapshot_id=snapshot.id
                 )
-                session.add(record)
+                records.append(record)
             except Exception as e:
                 print(f"Error processing event {event.get('id')}: {e}")
         
+        # Bulk insert
+        session.add_all(records)
         session.commit()
-        print(f"Successfully stored {len(events)} events in Snapshot {snapshot.id}")
+        print(f"Successfully stored {len(records)} events in Snapshot {snapshot.id}")
 
 def get_latest_events_from_db():
     """Retrieves events from the most recent snapshot."""
